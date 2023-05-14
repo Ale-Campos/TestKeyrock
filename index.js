@@ -2,6 +2,7 @@ import express from "express";
 import axios from "axios";
 import session from "express-session";
 import { Middlewares } from "./middlewares.js";
+import e from "express";
 const app = express();
 
 app.use(express.json());
@@ -71,6 +72,7 @@ app.get("/welcome", async (req, res) => {
       return res.data;
     });
 
+  console.log(user);
   res.render("welcome", { user });
 });
 
@@ -83,14 +85,72 @@ app.get("/login", (req, res) => {
   res.render("login");
 });
 
+app.post("/prueba", async (req, res) => {
+  const result = await axios
+    .post(
+      "http://localhost:3000/oauth2/token",
+      {
+        grant_type: "password",
+        username: "admin@test.com",
+        password: "1234",
+      },
+      {
+        headers: {
+          Authorization: buildHeader(),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    )
+    .then((res) => {
+      return res.data;
+    })
+    .catch((error) => {
+      console.log(error.response.data);
+    });
+  res.send(result);
+});
+
 //Recursos
 app.get("/pantallaUno", Middlewares.AuthPantalla1, (req, res) => {
   res.render("pantallaUno");
 });
+
 app.get("/pantallaDos", Middlewares.AuthPantalla2, (req, res) => {
   res.render("pantallaDos");
 });
 
+app.get("/create-user", (req, res) => {
+  res.render("create");
+});
+
+app.post("/create-user", async (req, res) => {
+  const { username, email, password } = req.body;
+  console.log(req.session.access_token);
+  await axios
+    .post(
+      "http://localhost:3000/v1/users",
+      {
+        username,
+        email,
+        password,
+      },
+      {
+        headers: {
+          "X-Auth-token": req.session.access_token,
+        },
+      }
+    )
+    .then((res) => {
+      console.log(res.data);
+      res.send("Usuario creado");
+    })
+    .catch((error) => {
+      console.log(error.response.data);
+      res.send("Error");
+    });
+});
+
+//Server Up
 app.listen(2000, () => {
   console.log("El servidor está funcionando en el puerto 2000");
 });
