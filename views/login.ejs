@@ -7,10 +7,12 @@
     <title>Document</title>
   </head>
   <body>
-    <button
-      onclick='window.location.href="http://localhost:3000/oauth2/authorize?response_type=code&client_id=bcc49c35-eb52-4e6e-9523-850f0309e8cd&state=xyz&redirect_uri=http://localhost:2000/access-code"'
-    >
-      Ingresar
-    </button>
+    <form action="/login" method="POST">
+      <label for="username">Username</label>
+      <input type="text" name="username" />
+      <label for="password">Password</label>
+      <input type="password" name="password" />
+      <button type="submit">Login</button>
+    </form>
   </body>
 </html>

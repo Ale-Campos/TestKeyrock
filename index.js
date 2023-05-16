@@ -2,7 +2,6 @@ import express from "express";
 import axios from "axios";
 import session from "express-session";
 import { Middlewares } from "./middlewares.js";
-import e from "express";
 const app = express();
 
 app.use(express.json());
@@ -16,22 +15,28 @@ app.use(
   })
 );
 
-//Handle accesscode
-app.get("/access-code", async (req, res) => {
-  if (req.session.access_token) {
-    res.redirect("/welcome");
-  } else {
-    const accessCode = req.query.code;
-    console.log("ACCESSCODE");
-    console.log(accessCode);
+//Login
 
+app.get("/log-out", (req, res) => {
+  req.session.access_token = undefined;
+  res.redirect("/login");
+});
+
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log(username, password);
     const result = await axios
       .post(
         "http://localhost:3000/oauth2/token",
         {
-          grant_type: "authorization_code",
-          code: accessCode,
-          redirect_uri: "http://localhost:2000/access-code",
+          grant_type: "password",
+          username,
+          password,
         },
         {
           headers: {
@@ -42,16 +47,43 @@ app.get("/access-code", async (req, res) => {
       )
       .then((res) => {
         return res.data;
-      })
-      .catch((error) => {
-        console.log(error.response.data);
       });
     console.log(result);
-
     req.session.access_token = result.access_token;
+    console.log(req.session.access_token);
+
+    req.session.api_token = await getApiToken(
+      username,
+      password,
+      req.session.access_token
+    );
     res.redirect("/welcome");
+  } catch (error) {
+    res.render("login");
   }
 });
+
+async function getApiToken(name, password, token) {
+  const result = await axios
+    .post(
+      "http://localhost:3000/v1/auth/tokens",
+      {
+        name,
+        password,
+      },
+      {
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .catch((error) => {
+      throw new Error();
+    });
+  console.log("Apitoken:" + result.headers["x-subject-token"]);
+  return result.headers["x-subject-token"];
+}
 
 function buildHeader() {
   const key =
@@ -61,7 +93,12 @@ function buildHeader() {
   return "Basic " + base64;
 }
 
+//Recursos
+
 app.get("/welcome", async (req, res) => {
+  if (!req.session.access_token) {
+    res.redirect("login");
+  }
   const user = await axios
     .get("http://localhost:3000/user", {
       headers: {
@@ -75,42 +112,6 @@ app.get("/welcome", async (req, res) => {
   console.log(user);
   res.render("welcome", { user });
 });
-
-app.get("/log-out", (req, res) => {
-  req.session.access_token = undefined;
-  res.redirect("/login");
-});
-
-app.get("/login", (req, res) => {
-  res.render("login");
-});
-
-app.post("/prueba", async (req, res) => {
-  const result = await axios
-    .post(
-      "http://localhost:3000/oauth2/token",
-      {
-        grant_type: "password",
-        username: "admin@test.com",
-        password: "1234",
-      },
-      {
-        headers: {
-          Authorization: buildHeader(),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    )
-    .then((res) => {
-      return res.data;
-    })
-    .catch((error) => {
-      console.log(error.response.data);
-    });
-  res.send(result);
-});
-
-//Recursos
 app.get("/pantallaUno", Middlewares.AuthPantalla1, (req, res) => {
   res.render("pantallaUno");
 });
