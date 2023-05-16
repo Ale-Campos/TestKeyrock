@@ -96,21 +96,22 @@ function buildHeader() {
 //Recursos
 
 app.get("/welcome", async (req, res) => {
-  if (!req.session.access_token) {
+  if (req.session.access_token) {
+    const user = await axios
+      .get("http://localhost:3000/user", {
+        headers: {
+          Authorization: `Bearer ${req.session.access_token}`,
+        },
+      })
+      .then((res) => {
+        return res.data;
+      });
+
+    console.log(user);
+    res.render("welcome", { user });
+  } else {
     res.redirect("login");
   }
-  const user = await axios
-    .get("http://localhost:3000/user", {
-      headers: {
-        Authorization: `Bearer ${req.session.access_token}`,
-      },
-    })
-    .then((res) => {
-      return res.data;
-    });
-
-  console.log(user);
-  res.render("welcome", { user });
 });
 app.get("/pantallaUno", Middlewares.AuthPantalla1, (req, res) => {
   res.render("pantallaUno");
